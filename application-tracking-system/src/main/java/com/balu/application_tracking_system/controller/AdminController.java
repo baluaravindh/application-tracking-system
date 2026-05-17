@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,9 +29,13 @@ public class AdminController {
     @Operation(summary = "Create HR account")
     @PostMapping("/create-hr")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponseDTO> createHr(
-            @Valid @RequestBody RegisterRequestDTO dto, @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.createHr(dto, userDetails.getUsername()));
+    public ResponseEntity<UserResponseDTO> createHr(@Valid @RequestBody RegisterRequestDTO dto) {
+
+        String adminEmail = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.createHr(dto, adminEmail));
     }
 
     //  GET  /api/admin/users   → Admin views all users
