@@ -1,11 +1,13 @@
 package com.balu.application_tracking_system.service;
 
+import com.balu.application_tracking_system.dto.ApplicationNotificationDTO;
 import com.balu.application_tracking_system.dto.ApplicationRequestDTO;
 import com.balu.application_tracking_system.dto.ApplicationResponseDTO;
 import com.balu.application_tracking_system.entity.Application;
 import com.balu.application_tracking_system.entity.Job;
 import com.balu.application_tracking_system.entity.User;
 import com.balu.application_tracking_system.exception.ResourceNotFoundException;
+import com.balu.application_tracking_system.messaging.NotificationPublisher;
 import com.balu.application_tracking_system.repository.ApplicationRepository;
 import com.balu.application_tracking_system.repository.JobRepository;
 import com.balu.application_tracking_system.repository.UserRepository;
@@ -23,6 +25,7 @@ public class ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final UserRepository userRepository;
     private final JobRepository jobRepository;
+    private final NotificationPublisher notificationPublisher;
 
     // applyForJob (CANDIDATE only):
     public ApplicationResponseDTO applyForJob(
@@ -73,6 +76,17 @@ public class ApplicationService {
 
         // 8. Save and return DTO
         Application saved = applicationRepository.save(application);
+
+        ApplicationNotificationDTO notification = new ApplicationNotificationDTO(
+                saved.getId(),
+                saved.getCandidate().getFullName(),
+                saved.getCandidate().getEmail(),
+                saved.getJob().getTitle(),
+                saved.getStatus().name(),
+                saved.getAppliedAt()
+        );
+
+        notificationPublisher.publishApplicationNotification(notification);
         return mapToDto(saved);
     }
 

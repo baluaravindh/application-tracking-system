@@ -1,11 +1,13 @@
 package com.balu.application_tracking_system.service;
 
+import com.balu.application_tracking_system.dto.InterviewNotificationDTO;
 import com.balu.application_tracking_system.dto.InterviewRequestDTO;
 import com.balu.application_tracking_system.dto.InterviewResponseDTO;
 import com.balu.application_tracking_system.entity.Application;
 import com.balu.application_tracking_system.entity.Interview;
 import com.balu.application_tracking_system.entity.User;
 import com.balu.application_tracking_system.exception.ResourceNotFoundException;
+import com.balu.application_tracking_system.messaging.NotificationPublisher;
 import com.balu.application_tracking_system.repository.ApplicationRepository;
 import com.balu.application_tracking_system.repository.InterviewRepository;
 import com.balu.application_tracking_system.repository.UserRepository;
@@ -20,6 +22,7 @@ public class InterviewService {
     private final InterviewRepository interviewRepository;
     private final UserRepository userRepository;
     private final ApplicationRepository applicationRepository;
+    private final NotificationPublisher notificationPublisher;
 
     // scheduleInterview (HR only):
     public InterviewResponseDTO scheduleInterview(Long applicationId, InterviewRequestDTO dto) {
@@ -68,6 +71,20 @@ public class InterviewService {
 
         // 8. Save and return DTO
         Interview saved = interviewRepository.save(interview);
+
+        InterviewNotificationDTO notification = new InterviewNotificationDTO(
+                saved.getId(),
+                saved.getApplication().getId(),
+                saved.getApplication().getCandidate().getFullName(),
+                saved.getApplication().getCandidate().getEmail(),
+                saved.getApplication().getJob().getTitle(),
+                saved.getScheduledAt(),
+                saved.getMeetingLink(),
+                saved.getVenue(),
+                saved.getStatus().name()
+        );
+
+        notificationPublisher.publishInterviewNotification(notification);
         return mapToDto(saved);
     }
 
