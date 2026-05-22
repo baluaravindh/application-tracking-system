@@ -14,7 +14,10 @@ import com.balu.application_tracking_system.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,11 +29,13 @@ public class ApplicationService {
     private final UserRepository userRepository;
     private final JobRepository jobRepository;
     private final NotificationPublisher notificationPublisher;
+    private final ResumeService resumeService;
 
     // applyForJob (CANDIDATE only):
     public ApplicationResponseDTO applyForJob(
             Long jobId,
-            ApplicationRequestDTO dto) {
+            String coverLetter,
+            MultipartFile resumeFile) throws IOException {
 
         // 1. Get logged in candidate email from SecurityContext
         String candidateEmail = SecurityContextHolder
@@ -71,8 +76,16 @@ public class ApplicationService {
         Application application = new Application();
         application.setCandidate(user);
         application.setJob(job);
-        application.setCoverLetter(dto.getCoverLetter());
+        application.setCoverLetter(coverLetter);
         application.setStatus(Application.ApplicationStatus.APPLIED);
+
+        // Extract resume text and calculate score
+        if (resumeFile != null && !resumeFile.isEmpty()) {
+            String resumeText = resumeService.extractTextFromPdf(resumeFile);
+            int score = resumeService.calculateMatchScore(resumeText, job.getSkills());
+            application.setMatchScore(score);
+            application.setResumeUrl(resumeFile.getOriginalFilename());
+        }
 
         // 8. Save and return DTO
         Application saved = applicationRepository.save(application);
@@ -228,6 +241,17 @@ public class ApplicationService {
         return mapToDto(withdrawnApplication);
     }
 
+    // HR views applications ranked by match score
+    public List<ApplicationResponseDTO> getApplicationsByJobRanked(Long jobId) {
+        return applicationRepository.findByJobId(jobId)
+                .stream()
+                .map(this::mapToDto)
+                .sorted(Comparator.comparingInt(
+                        ApplicationResponseDTO::getMatchScore)
+                        .reversed())
+                .collect(Collectors.toList());
+    }
+
 
     //---MAPPER---
     private ApplicationResponseDTO mapToDto(Application application) {
@@ -242,6 +266,8 @@ public class ApplicationService {
                 application.getJob().getSkills(),
                 application.getStatus().name(),
                 application.getCoverLetter(),
+                application.getResumeUrl(),
+                application.getMatchScore(),
                 application.getAppliedAt()
         );
     }

@@ -8,10 +8,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Tag(name = "Applications", description = "Job Application by Candidate APIs")
@@ -24,10 +27,13 @@ public class ApplicationController {
 
     //  POST   /api/applications/{jobId}        → Candidate applies
     @Operation(summary = "Candidate will apply for job.")
-    @PostMapping("/{jobId}")
+    @PostMapping(value = "/{jobId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('CANDIDATE')")
-    public ResponseEntity<ApplicationResponseDTO> applyForJob(@PathVariable Long jobId, @Valid @RequestBody ApplicationRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.applyForJob(jobId, dto));
+    public ResponseEntity<ApplicationResponseDTO> applyForJob(
+            @PathVariable Long jobId,
+            @RequestParam("coverLetter") String coverLetter,
+            @RequestParam("resume") MultipartFile resume) throws IOException {
+        return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.applyForJob(jobId, coverLetter, resume));
     }
 
     //  GET    /api/applications/my             → Candidate views own applications
@@ -62,5 +68,14 @@ public class ApplicationController {
     @PreAuthorize("hasRole('CANDIDATE')")
     public ResponseEntity<ApplicationResponseDTO> withdrawApplication(@PathVariable Long id) {
         return ResponseEntity.ok(applicationService.withdrawApplication(id));
+    }
+
+    // GET /api/applications/job/{jobId}/ranked
+    @Operation(summary = "HR can view the candidate resume score")
+    @GetMapping("/job/{jobId}/ranked")
+    @PreAuthorize("hasRole('HR')")
+    public ResponseEntity<List<ApplicationResponseDTO>> getApplicationsRanked(
+            @PathVariable Long jobId){
+        return ResponseEntity.ok(applicationService.getApplicationsByJobRanked(jobId));
     }
 }

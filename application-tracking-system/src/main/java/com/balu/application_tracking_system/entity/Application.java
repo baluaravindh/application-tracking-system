@@ -36,6 +36,8 @@ public class Application {
     @Column(nullable = false)
     private LocalDateTime appliedAt;
     private LocalDateTime updatedAt;
+    private String resumeUrl;
+    private Integer matchScore;
 
     public enum ApplicationStatus {
         APPLIED,

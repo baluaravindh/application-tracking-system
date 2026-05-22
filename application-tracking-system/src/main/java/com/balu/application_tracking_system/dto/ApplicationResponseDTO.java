@@ -21,5 +21,7 @@ public class ApplicationResponseDTO {
     private String jobSkills;
     private String status;
     private String coverLetter;
+    private String resumeUrl;
+    private Integer matchScore;
     private LocalDateTime appliedAt;
 }
