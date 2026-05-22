@@ -247,8 +247,8 @@ public class ApplicationService {
                 .stream()
                 .map(this::mapToDto)
                 .sorted(Comparator.comparingInt(
-                        ApplicationResponseDTO::getMatchScore)
-                        .reversed())
+                        dto -> dto.getMatchScore() != null
+                                ? -dto.getMatchScore() : 0))
                 .collect(Collectors.toList());
     }
 
